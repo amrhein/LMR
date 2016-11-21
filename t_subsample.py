@@ -21,15 +21,18 @@ interval: two-element array giving the start and end years. Make sure that these
     # Change the interval so that it's an integer multiple of tau.
     intl = int(np.diff(intervalo))
     interval = intervalo
-    interval[1] = interval[0]+intl-np.mod(intl,tau)-1
+    interval[1] = interval[0]+intl-np.mod(intl,tau)
     newt = np.arange(interval[0],interval[1],tau) + tau/2
     # define a new dataframe to populate
     df = pandas.DataFrame(index=newt)
 
     # Loop through different records, bin them, and populate df with binned values
 
+    import pdb
+    pdb.set_trace()
+
     for ii in np.arange(0,len((recdf.columns))):
-        # changed this from loc to iloc
+        #rec = recdf.iloc[interval[0]:(interval[1]-np.mod(intl,tau)),ii].values
         rec = recdf.iloc[interval[0]:interval[1],ii].values
         rr = rec.reshape(tau,-1)
         r2 = np.nanmean(rr,0)

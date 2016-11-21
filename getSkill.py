@@ -63,9 +63,6 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
     # Bin "average" (ignoring missing values) the data with bin widths tau. 
     # In general these outputs can have many missing values.
 
-    import pdb
-    pdb.set_trace()
-    
     pd_caln = t_subsample(pdr,tau,calInt)
     pd_valn = t_subsample(pdr,tau,valInt)
 
