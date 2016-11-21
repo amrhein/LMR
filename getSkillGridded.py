@@ -72,34 +72,6 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
             tol = s.max()/10.
             kt = sum(s>tol)
 
-        # QR shortcut is necessary for huge matrices (e.g. from model output).
-        # Mathematically the same as just computing SVD
-        #[l0,l1] = pdcal.values.shape
-        #if l0>l1:
-        #    q,r = np.linalg.qr(pdcal.values,0)
-        #    v,s,v = svd(r)
-
-            # If no truncation parameter is specified, make one up using a tolerance
-            #if kt==0:
-                # Tolerance for SVD truncation
-                #        tol = s.max()/100.
-            #    tol = s.max()/10.
-            #    kt = sum(s>tol)
-
-         #   u = np.dot(pdcal.values,v[:kt])
-        #else:
-         #   q,r = np.linalg.qr(pdcal.values.transpose(),0)
-         #   u,s,u = svd(r)
-
-            # If no truncation parameter is specified, make one up using a tolerance
-           # if kt==0:
-           # Tolerance for SVD truncation
-                #        tol = s.max()/100.
-                #    tol = s.max()/10.
-            #    kt = sum(s>tol)
-
-          #  v = np.dot(u[:,:k].transpose(),pdcal.values)
-            
         De = np.transpose(np.dot(np.diag(s[:kt]),(v[:kt,:])))
 
     else:
@@ -111,25 +83,10 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
     D0  = D.transpose()[:-tau,:]
     # evolved IC matrix
     Dt  = D.transpose()[tau:,:]
-    # problem is somewhere in here?
-    #c0 = np.cov(Dt)
-    #ctfull = np.cov(Dt[:,tau:],Dt[:,:-tau])
-
-    # Relelvant portion is one of the off-diagonal covariance submatrices
-    #ct = ctfull[m:,:-m]
-    
-    #G = np.dot(ct,linalg.pinv(c0,cond=.01))
-#    import pdb
-#    pdb.set_trace()
-
     G = np.dot(np.dot(Dt.transpose(),D0),linalg.pinv(np.dot(D0.transpose(),D0),cond=.01))
-    #    G = np.dot(ct,linalg.pinv(c0))
 
     if doEOF:
         # Project out of SVD space into proxy space.
-        # Trouble is that this can get huge...
-        # Will need to use QR in lieu of eigen decomposing the whole covariance matrix
-        # G = np.dot(u[:,:kt],np.dot(Go,u[:,:kt].transpose()))
 
         # returning the transpose so that dims are the same as for pd_val 
         pred =np.dot(u[:,:kt],
@@ -145,10 +102,10 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
     ##############################################################################
     # Maybe should not include interpolated times?
 
-    #rmse = np.sqrt(np.nanmean((pd_val.values.transpose()[:,1:]-pred[:,:-1])**2,1))
     rmse = np.sqrt(np.nanmean((pd_val.values[1:,:]-pred[:-1,:])**2,0))
 
     # Just compute the diagonal of the covariance matrix. I divide by l-2 (rather than l-1 for an unbiased covariance estimator) because we can only look at l-1 predicted values.
+
     cvec = np.sum(
                   (pd_val.values[1:,:]-np.mean(pd_val.values[1:,:],0))
                   *(pred[:-1,:]-np.mean(pred[:-1,:],0))
@@ -168,7 +125,6 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
 
     plt.figure(figsize=(20,10))
     ax1 = plt.subplot(1,3,1)
-    #plt.matshow((c0))
     c0 = np.dot(D0.transpose(),D0)
     plt.imshow(c0, origin='upper',interpolation='none')
     if doEOF: 
@@ -186,55 +142,12 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
         ttl = ax2.set_title('Lag ' + str(tau) + ' covariance in the EOF basis',size=16)
     else: 
         ttl = ax2.set_title('Lag ' + str(tau) + ' covariance',size=16)
-    #ttl = ax2.set_title('Lag ' + str(tau) + ' year covariance')
-
     
     ax3=plt.subplot(1,3,3)
     plt.imshow(G, origin='upper',interpolation='none')
     plt.colorbar(fraction=0.046, pad=0.04)
     ttl = ax3.set_title('G matrix',size=16)
-#    ttl.set_position([.5, 1.1])
     plt.show()
-
-    # eigs
-#    [e,ev] = linalg.eig(Go)
-#    ax3=plt.subplot(1,2,2)
-#    ax3=plt.subplot(1,2,1)
-#    plt.plot(np.real(np.log(e)))
-#    plt.title('Real part of log eigenvalues of G')
-
-#    ax3=plt.subplot(1,2,2)
-#    plt.plot(np.imag(np.log(e)))
-#    plt.title('Imaginary part of log eigenvalues of G')
-#    plt.show()
-
-    # RMSE map
-
-    # Histogram of skill
-
-    # Raw time series
-
-#    plt.figure(figsize=(12,20))
-#    ax1 = plt.subplot(1,2,1)
-#    lpn,mpn=pd_cal.shape
-#    # spacing between time series
-#    spc = 3;
-#    pns = pd_cal+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
-#    plt.plot(pns.iloc[:,:100],color='k');
-#    plt.autoscale(enable=True, axis='both', tight=True)
-#    plt.title('A subset of records used over the calibration interval')
-#    plt.xlabel('Time (years)')
-
-#    ax2 = plt.subplot(1,2,2)
-#    lpn,mpn=pd_val.shape
-#    # spacing between time series
-#    spc = 3;
-#    pns = pd_val+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
-#    plt.plot(pns.iloc[:,:100],color='k');
-#    plt.autoscale(enable=True, axis='both', tight=True)
-#    plt.title('A subset of records used over the valibration interval')
-#    plt.xlabel('Time (years)')
-
 
     ############
     ## Output ##
