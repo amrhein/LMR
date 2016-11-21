@@ -78,6 +78,7 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
         De = pd_cal.values
 
     l,m = De.shape
+
     D  = De.transpose()
     # initial condition matrix
     D0  = D.transpose()[:-tau,:]

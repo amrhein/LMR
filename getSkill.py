@@ -11,8 +11,9 @@ from matplotlib.figure import Figure
 from matplotlib.colors import from_levels_and_colors
 from mpl_toolkits.basemap import Basemap
 from t_subsample import t_subsample
+from scipy import signal
     
-def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
+def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False):
     ''' Constructs a LIM using the equation of Penland (1996) etc. by computing two covariance matrices at lag 0 and lag tau.
     D is a 2d matrix whos rows are indexed in time and whose columns correspond to different records.
     Tau is a unit of time and should be specified in terms of the units indexing D in time (e.g., if D is yearly, a lag of two years is specified by tau = 2)
@@ -62,6 +63,9 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
     # Bin "average" (ignoring missing values) the data with bin widths tau. 
     # In general these outputs can have many missing values.
 
+    import pdb
+    pdb.set_trace()
+    
     pd_caln = t_subsample(pdr,tau,calInt)
     pd_valn = t_subsample(pdr,tau,valInt)
 
@@ -79,66 +83,90 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
     pm = pmr.loc[tokeep]
 
 
-    ## Normalize ##
-    pd_calnm = (pd_cali - pd_cali.mean())/pd_cali.std()
-    pd_valnm = (pd_vali - pd_vali.mean())/pd_vali.std()
-
     # One more check for any missing values in the calibration (could arise from edges of interpolation)
 
-    #tokeep2 = ~(pd_calnm.isnull().sum()>0) & ((~pd_valnm.isnull()).sum()>0)
-    tokeep2 = ~(pd_calnm.isnull().sum()>0)
-    pd_cal = pd_calnm.loc[:,tokeep2]
-    pd_val = pd_valnm.loc[:,tokeep2]
+    tokeep2 = ~(pd_cali.isnull().sum()>0) & ~(pd_vali.isnull().sum()>0)
+    #tokeep2 = ~(pd_cali.isnull().sum()>0)
+    pd_cal2 = pd_cali.loc[:,tokeep2]
+    pd_val2 = pd_vali.loc[:,tokeep2]
     pm = pm.loc[tokeep2]
+
+    ## Detrend ##
+    if doDetrend:
+        pd_cal2 = pandas.DataFrame(columns = pd_cal2.columns,index=pd_cal2.index,data=signal.detrend(pd_cal2,0))
+        pd_val2 = pandas.DataFrame(columns = pd_val2.columns,index=pd_val2.index,data=signal.detrend(pd_val2,0))
+#        pd_cal2 = signal.detrend(pd_cal2,0)
+#        pd_val2 = signal.detrend(pd_val2,0)
+    
+    ## Normalize ##
+    pd_cal = (pd_cal2 - pd_cal2.mean())/pd_cal2.std()
+    pd_val = (pd_val2 - pd_val2.mean())/pd_val2.std()
+
 
     #################################################
     ## Compute a LIM over the calibration interval ##
     #################################################
 
     if doEOF:
-        ## Convert to truncated EOF space
-        [u,s,v] = np.linalg.svd(np.transpose(pd_cal.values),full_matrices=True)
-
+        u,s,v = np.linalg.svd(np.transpose(pd_cal.values),full_matrices=False)
+    
+        if kt==0:
         # Tolerance for SVD truncation
-        #        tol = s.max()/100.
-        tol = s.max()/10.
-        ks = s>tol
+            tol = s.max()/100.
+            kt = sum(s>tol)
 
-
-        # in the EOF basis:
-        De = np.transpose(np.dot(np.diag(s[ks]),(v[:sum(ks),:])))
+        De = np.transpose(np.dot(np.diag(s[:kt]),(v[:kt,:])))
 
     else:
         De = pd_cal.values
 
-    l,m = De.shape
-    Dt  = De.transpose()
-    c0 = np.cov(Dt)
-    ctfull = np.cov(Dt[:,tau:],Dt[:,:-tau])
+    D  = De.transpose()
+    # initial condition matrix
+    D0  = D.transpose()[:-tau,:]
+    # evolved IC matrix
+    Dt  = D.transpose()[tau:,:]
 
-    # relelvant portion is one of the off-diagonal covariance submatrices
-    ct = ctfull[m:,:-m]
-    
-    Go = np.dot(ct,linalg.pinv(c0,cond=.01))
-    #    G = np.dot(ct,linalg.pinv(c0))
+    c0 = np.dot(D0.transpose(),D0)
+    ct = np.dot(Dt.transpose(),D0)
+
+#    G = np.dot(ct,linalg.pinv(c0,cond=.01))
+    G = np.dot(ct,linalg.pinv(c0))
 
     if doEOF:
-        # Project out of SVD space into proxy space
-        G = np.dot(u[:,:sum(ks)],np.dot(Go,u[:,:sum(ks)].transpose()))
+        # Project out of SVD space into proxy space.
 
-
+        # returning the transpose so that dims are the same as for pd_val 
+        pred =np.dot(u[:,:kt],
+              np.dot(G,
+              np.dot(u[:,:kt].transpose(),pd_val.values.transpose())
+              )
+              ).transpose()
+    else:
+        pred = np.dot(G,pd_val.values.transpose()).transpose()
 
     ##############################################################################
     ## Simulate values in the validation interval at tau leads and compute RMSE ##
     ##############################################################################
     # Maybe should not include interpolated times?
 
-    pred = np.dot(G,pd_val.values.transpose())
-    rmse = np.sqrt(np.nanmean((pd_val.values.transpose()[:,1:]-pred[:,:-1])**2,1))
+    rmse = np.sqrt(np.nanmean((pd_val.values[1:,:]-pred[:-1,:])**2,0))
 
-    rdf = pandas.DataFrame(columns=pd_val.columns)
-    rdf.loc[1] = rmse
-    
+    # Only compute the diagonal of the covariance matrix to save time / space
+
+    # Number of non-nan comparisons:
+    l = np.sum(~np.isnan(np.sum(pred[:-1,:]+pd_val.values[1:,:],1)))
+
+    cvec = np.nansum(
+                  (pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
+                  *(pred[:-1,:]-np.nanmean(pred[:-1,:],0))
+                 ,0)/(l-1)
+    corr = cvec/np.nanstd(pd_val.values[1:,:],0)/np.nanstd(pred[:-1,:],0)
+
+    rmsedf = pandas.DataFrame(columns=pd_val.columns)
+    rmsedf.loc[1] = rmse
+    corrdf = pandas.DataFrame(columns=pd_val.columns)
+    corrdf.loc[1] = corr
+
     #################
     ## Make plots! ##
     #################
@@ -172,7 +200,7 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
     plt.show()
 
     # eigs
-#    [e,ev] = linalg.eig(Go)
+#    [e,ev] = linalg.eig(G)
 #    ax3=plt.subplot(1,2,2)
 #    ax3=plt.subplot(1,2,1)
 #    plt.plot(np.real(np.log(e)))
@@ -202,7 +230,7 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
     groups = pm.groupby('Archive_type')
     for name, group in groups:
         x,y = m(group.Lon_E.values,group.Lat_N.values)
-        rg = rdf[group.index]
+        rg = rmsedf[group.index]
         sc = plt.scatter(x, y, c=rg, marker = mkr_dict[name], s=100, label=name.replace('_',' '),edgecolors='none')
 
     plt.legend(loc='center', bbox_to_anchor=(.15, .15),fancybox=True)
@@ -210,8 +238,39 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
     cbar = plt.colorbar(sc, fraction=0.046, pad=0.04)
     cbar.set_label('Normalized units')
     m.drawcoastlines()
-    plt.title('Prediction RMSE calibrated on ' + str(calInt[0])+ ' - ' + str(calInt[1]) + ', validated on '+  str(valInt[0])+ ' - ' + str(valInt[1]) + ', tau = ' + str(tau) + ' year',size=20,usetex=True)
+    plt.title('Prediction RMSE calibrated on ' + str(calInt[0])+ ' - ' + str(calInt[1]) + ', validated on '+  str(valInt[0])+ ' - ' + str(valInt[1]) + ', tau = ' + str(tau) + ' year',size=20)
     plt.show();
+
+    # Correlation map
+    
+    plt.figure(figsize=(20,10))
+    m = Basemap(projection='moll',llcrnrlat=-87,urcrnrlat=81,lon_0=0,\
+                llcrnrlon=0,urcrnrlon=360,resolution='c');
+    # draw parallels and meridians.
+    parallels = np.arange(-90.,90.,30.)
+    # Label the meridians and parallels
+    m.drawparallels(parallels,labels=[False,True,True,False])
+    # Draw Meridians and Labels
+    meridians = np.arange(-180.,181.,30.)
+    m.drawmeridians(meridians)
+    m.drawmapboundary(fill_color='white')
+
+    mkr_dict = {'Corals_and_Sclerosponges': '^', 'Ice_Cores': '+', 'Lake_Cores': 'o','Marine_Cores':'d','Speleothems':'s','Tree_Rings':'x'}
+
+    groups = pm.groupby('Archive_type')
+    for name, group in groups:
+        x,y = m(group.Lon_E.values,group.Lat_N.values)
+        rg = corrdf[group.index]
+        sc = plt.scatter(x, y, c=rg, marker = mkr_dict[name], s=100, label=name.replace('_',' '),edgecolors='none')
+
+    plt.legend(loc='center', bbox_to_anchor=(.15, .15),fancybox=True)
+
+    cbar = plt.colorbar(sc, fraction=0.046, pad=0.04)
+    cbar.set_label('Normalized units')
+    m.drawcoastlines()
+    plt.title('Prediction correlation calibrated on ' + str(calInt[0])+ ' - ' + str(calInt[1]) + ', validated on '+  str(valInt[0])+ ' - ' + str(valInt[1]) + ', tau = ' + str(tau) + ' year',size=20)
+    plt.show();
+
 
     # Histograms of skill
     ii = 0
@@ -220,39 +279,40 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF):
     for name, group in groups:
         ii+=1
         plt.subplot(np.ceil(Ng/3.),3,ii)
-        plt.hist(rdf[group.index].values.transpose(),bins=10)
+        plt.hist(rmsedf[group.index].values.transpose(),bins=10)
         plt.title(name)
         plt.ylabel('Number of records')
         plt.suptitle('Histograms of RMSE',size=16)
 
     # Raw time series
 
-    plt.figure(figsize=(12,20))
-    ax1 = plt.subplot(1,2,1)
-    lpn,mpn=pd_cal.shape
-    # spacing between time series
-    spc = 3;
-    pns = pd_cal+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
-    plt.plot(pns.iloc[:,:100],color='k');
-    plt.autoscale(enable=True, axis='both', tight=True)
-    plt.title('A subset of records used over the calibration interval')
-    plt.xlabel('Time (years)')
+#    plt.figure(figsize=(12,20))
+#    ax1 = plt.subplot(1,2,1)
+#    lpn,mpn=pd_cal.shape
+#    # spacing between time series
+#    spc = 3;
+#    pns = pd_cal+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
+#    plt.plot(pns.iloc[:,:100],color='k');
+#    plt.autoscale(enable=True, axis='both', tight=True)
+#    plt.title('A subset of records used over the calibration interval')
+#    plt.xlabel('Time (years)')
 
-    ax2 = plt.subplot(1,2,2)
-    lpn,mpn=pd_val.shape
-    # spacing between time series
-    spc = 3;
-    pns = pd_val+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
-    plt.plot(pns.iloc[:,:100],color='k');
-    plt.autoscale(enable=True, axis='both', tight=True)
-    plt.title('A subset of records used over the valibration interval')
-    plt.xlabel('Time (years)')
+#    ax2 = plt.subplot(1,2,2)
+#    lpn,mpn=pd_val.shape
+#    # spacing between time series
+#    spc = 3;
+#    pns = pd_val+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
+#    plt.plot(pns.iloc[:,:100],color='k');
+#    plt.autoscale(enable=True, axis='both', tight=True)
+#    plt.title('A subset of records used over the valibration interval')
+#    plt.xlabel('Time (years)')
 
 
     ############
     ## Output ##
     ############
 
-    return rdf,G,c0,ct,pm
+    return corrdf,rmsedf,G,c0,ct,pm
+#    return rdf,G,c0,ct,pm
 
 
