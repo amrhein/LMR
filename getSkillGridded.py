@@ -106,15 +106,23 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
         De = pd_cal.values
 
     l,m = De.shape
-    Dt  = De.transpose()
+    D  = De.transpose()
+    # initial condition matrix
+    D0  = D.transpose()[:-tau,:]
+    # evolved IC matrix
+    Dt  = D.transpose()[tau:,:]
     # problem is somewhere in here?
-    c0 = np.cov(Dt)
-    ctfull = np.cov(Dt[:,tau:],Dt[:,:-tau])
+    #c0 = np.cov(Dt)
+    #ctfull = np.cov(Dt[:,tau:],Dt[:,:-tau])
 
     # Relelvant portion is one of the off-diagonal covariance submatrices
-    ct = ctfull[m:,:-m]
+    #ct = ctfull[m:,:-m]
     
-    G = np.dot(ct,linalg.pinv(c0,cond=.01))
+    #G = np.dot(ct,linalg.pinv(c0,cond=.01))
+#    import pdb
+#    pdb.set_trace()
+
+    G = np.dot(np.dot(Dt.transpose(),D0),linalg.pinv(np.dot(D0.transpose(),D0),cond=.01))
     #    G = np.dot(ct,linalg.pinv(c0))
 
     if doEOF:
@@ -145,10 +153,7 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
                   (pd_val.values[1:,:]-np.mean(pd_val.values[1:,:],0))
                   *(pred[:-1,:]-np.mean(pred[:-1,:],0))
                  ,0)/(l-2)
-    corr = cvec / np.std(pd_val.values[1:,:],0) /np.std(pred[:-1,:],0)
-
-    #import pdb
-    #pdb.set_trace()
+    corr = cvec/np.std(pd_val.values[1:,:],0)/np.std(pred[:-1,:],0)
 
     rmsedf = pandas.DataFrame(columns=pd_val.columns)
     rmsedf.loc[1] = rmse
@@ -164,6 +169,7 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
     plt.figure(figsize=(20,10))
     ax1 = plt.subplot(1,3,1)
     #plt.matshow((c0))
+    c0 = np.dot(D0.transpose(),D0)
     plt.imshow(c0, origin='upper',interpolation='none')
     if doEOF: 
         ttl = ax1.set_title('Lag 0 covariance in the EOF basis',size=16)
@@ -171,6 +177,8 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
         ttl = ax1.set_title('Lag 0 covariance',size=16)
     plt.colorbar(fraction=0.046, pad=0.04)
 
+
+    ct = np.dot(Dt.transpose(),D0)
     ax2 = plt.subplot(1,3,2)
     plt.imshow(ct, origin='upper',interpolation='none')
     plt.colorbar(fraction=0.046, pad=0.04)
@@ -206,26 +214,26 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
 
     # Raw time series
 
-    plt.figure(figsize=(12,20))
-    ax1 = plt.subplot(1,2,1)
-    lpn,mpn=pd_cal.shape
-    # spacing between time series
-    spc = 3;
-    pns = pd_cal+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
-    plt.plot(pns.iloc[:,:100],color='k');
-    plt.autoscale(enable=True, axis='both', tight=True)
-    plt.title('A subset of records used over the calibration interval')
-    plt.xlabel('Time (years)')
+#    plt.figure(figsize=(12,20))
+#    ax1 = plt.subplot(1,2,1)
+#    lpn,mpn=pd_cal.shape
+#    # spacing between time series
+#    spc = 3;
+#    pns = pd_cal+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
+#    plt.plot(pns.iloc[:,:100],color='k');
+#    plt.autoscale(enable=True, axis='both', tight=True)
+#    plt.title('A subset of records used over the calibration interval')
+#    plt.xlabel('Time (years)')
 
-    ax2 = plt.subplot(1,2,2)
-    lpn,mpn=pd_val.shape
-    # spacing between time series
-    spc = 3;
-    pns = pd_val+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
-    plt.plot(pns.iloc[:,:100],color='k');
-    plt.autoscale(enable=True, axis='both', tight=True)
-    plt.title('A subset of records used over the valibration interval')
-    plt.xlabel('Time (years)')
+#    ax2 = plt.subplot(1,2,2)
+#    lpn,mpn=pd_val.shape
+#    # spacing between time series
+#    spc = 3;
+#    pns = pd_val+np.outer(np.ones(lpn)*spc,np.arange(1,mpn+1));
+#    plt.plot(pns.iloc[:,:100],color='k');
+#    plt.autoscale(enable=True, axis='both', tight=True)
+#    plt.title('A subset of records used over the valibration interval')
+#    plt.xlabel('Time (years)')
 
 
     ############

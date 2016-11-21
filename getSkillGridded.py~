@@ -122,30 +122,38 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
         # Trouble is that this can get huge...
         # Will need to use QR in lieu of eigen decomposing the whole covariance matrix
         # G = np.dot(u[:,:kt],np.dot(Go,u[:,:kt].transpose()))
+
+        # returning the transpose so that dims are the same as for pd_val 
         pred =np.dot(u[:,:kt],
               np.dot(G,
               np.dot(u[:,:kt].transpose(),pd_val.values.transpose())
               )
-              )
+              ).transpose()
     else:
-        pred = np.dot(G,pd_val.values.transpose())
+        pred = np.dot(G,pd_val.values.transpose()).transpose()
 
     ##############################################################################
     ## Simulate values in the validation interval at tau leads and compute RMSE ##
     ##############################################################################
     # Maybe should not include interpolated times?
 
-    rmse = np.sqrt(np.nanmean((pd_val.values.transpose()[:,1:]-pred[:,:-1])**2,1))
+    #rmse = np.sqrt(np.nanmean((pd_val.values.transpose()[:,1:]-pred[:,:-1])**2,1))
+    rmse = np.sqrt(np.nanmean((pd_val.values[1:,:]-pred[:-1,:])**2,0))
+
+    # Just compute the diagonal of the covariance matrix. I divide by l-2 (rather than l-1 for an unbiased covariance estimator) because we can only look at l-1 predicted values.
+    cvec = np.sum(
+                  (pd_val.values[1:,:]-np.mean(pd_val.values[1:,:],0))
+                  *(pred[:-1,:]-np.mean(pred[:-1,:],0))
+                 ,0)/(l-2)
+    corr = cvec / np.std(pd_val.values[1:,:],0) /np.std(pred[:-1,:],0)
+
     import pdb
     pdb.set_trace()
-    
-    correl = np.corrcoef(pd_val.values.transpose()[:,1:],pred[:,:-1])
 
-    rdf = pandas.DataFrame(columns=pd_val.columns)
-    rdf.loc[1] = rmse
-
-#    import pdb
-#    pdb.set_trace()
+    rmsedf = pandas.DataFrame(columns=pd_val.columns)
+    rmsedf.loc[1] = rmse
+    corrdf = pandas.DataFrame(columns=pd_val.columns)
+    corrdf.loc[1] = corr
     
     #################
     ## Make plots! ##
@@ -224,4 +232,4 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
     ## Output ##
     ############
 
-    return rdf,G,c0,ct
+    return corrdf,rmsedf,G,c0,ct
