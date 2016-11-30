@@ -28,9 +28,6 @@ interval: two-element array giving the start and end years. Make sure that these
 
     # Loop through different records, bin them, and populate df with binned values
 
-    import pdb
-    pdb.set_trace()
-
     for ii in np.arange(0,len((recdf.columns))):
         #rec = recdf.iloc[interval[0]:(interval[1]-np.mod(intl,tau)),ii].values
         rec = recdf.iloc[interval[0]:interval[1],ii].values
