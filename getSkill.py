@@ -119,9 +119,10 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
 
     D  = De.transpose()
     # initial condition matrix
-    D0  = D.transpose()[:-tau,:]
+    # these are incremented by 1 because their timesteps are equal to tau
+    D0  = D.transpose()[:-1,:]
     # evolved IC matrix
-    Dt  = D.transpose()[tau:,:]
+    Dt  = D.transpose()[1:,:]
 
     c0 = np.dot(D0.transpose(),D0)
     ct = np.dot(Dt.transpose(),D0)
@@ -153,12 +154,23 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
     # Number of non-nan comparisons:
     l = np.sum(~np.isnan(np.sum(pred[:-1,:]+pd_val.values[1:,:],1)))
 
+    # Computing stds by hand because using np.std was giving weird results (possibly due to the different normalization)
     cvec = np.nansum(
                   (pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
                   *(pred[:-1,:]-np.nanmean(pred[:-1,:],0))
                  ,0)/(l-1)
-    corr = cvec/np.nanstd(pd_val.values[1:,:],0)/np.nanstd(pred[:-1,:],0)
+    stdval = (np.nansum(
+                  (pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
+                  *(pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
+                 ,0)/(l-1))**.5
 
+    stdpred = (np.nansum(
+                  (pred[:-1,:]-np.nanmean(pred[:-1,:],0))
+                  *(pred[:-1,:]-np.nanmean(pred[:-1,:],0))
+                 ,0)/(l-1))**.5
+
+    corr = cvec/stdval/stdpred
+    
     rmsedf = pandas.DataFrame(columns=pd_val.columns)
     rmsedf.loc[1] = rmse
     corrdf = pandas.DataFrame(columns=pd_val.columns)
