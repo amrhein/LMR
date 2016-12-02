@@ -58,7 +58,7 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
         pdr = proxy_data[tr.index]
 
     # Cut the data down to a relevant interval to speed binning
-    pdr = pdr[0:2013]
+    pdr = pdr[0:2011]
 
     ########################################################
     ## Bin data and subselect time frames for cal and val ## 
@@ -115,10 +115,10 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
             tol = s.max()/100.
             kt = sum(s>tol)
 
-        De = np.transpose(np.dot(np.diag(s[:kt]),(v[:kt,:])))
+        De = np.transpose(np.dot(np.diag(s[:kt]),(v[:kt,:]))).astype('float64')
 
     else:
-        De = pd_cal.values
+        De = pd_cal.values.astype('float64')
 
     D  = De.transpose()
     # initial condition matrix
@@ -131,6 +131,7 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
     ct = np.dot(Dt.transpose(),D0)
 
 #    G = np.dot(ct,linalg.pinv(c0,cond=.01))
+
     G = np.dot(ct,linalg.pinv(c0))
 
     if doEOF:
@@ -249,9 +250,12 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
                  'Speleothem'     :'s',
                  'Tree_ring'      :'d'}
 
+    import pdb
+    pdb.set_trace()
+    
     groups = pm.groupby('Archive_type')
     for name, group in groups:
-        x,y = m(group.Lon_E.values,group.Lat_N.values)
+        x,y = m(group.Lon_E.values.astype('float64'),group.Lat_N.values.astype('float64'))
         rg = rmsedf[group.index]
         sc = plt.scatter(x, y, c=rg, marker = mkr_dict[name], s=100, label=name.replace('_',' '),edgecolors='none')
 
@@ -279,7 +283,7 @@ def getSkill(data_types,proxy_data,proxy_meta,tau,calInt,valInt,doEOF=False,kt=0
 
     groups = pm.groupby('Archive_type')
     for name, group in groups:
-        x,y = m(group.Lon_E.values,group.Lat_N.values)
+        x,y = m(group.Lon_E.values.astype('float64'),group.Lat_N.values.astype('float64'))
         rg = corrdf[group.index]
         sc = plt.scatter(x, y, c=rg, marker = mkr_dict[name], s=100, label=name.replace('_',' '),edgecolors='none')
 
