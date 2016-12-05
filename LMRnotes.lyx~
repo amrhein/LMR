@@ -92,7 +92,9 @@ Each of these directories (r0, etc.) is an ensemble member of ensembles.
 \end_layout
 
 \begin_layout Standard
-Code 
+A good start for code is home/disk/ekman/rtardif/codes/LMR/pyLMR/verification/LM
+R_verify_grid.py.
+ Search for ``ensemble mean''
 \end_layout
 
 \end_body

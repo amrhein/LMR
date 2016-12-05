@@ -38,7 +38,9 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
             df = tmp
         else:
             # SQL like table join along index
-            df = df.merge(tmp, how='outer', on='PAGES 2k ID')
+            import pdb
+            pdb.set_trace()
+            df = df.merge(tmp, how='outer', on='PAGES ID')
 
     #fix index and column name
     col0 = df.columns[0]

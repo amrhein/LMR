@@ -31,7 +31,7 @@ def pages_xcel_to_dataframes(filename, metaout, dataout):
 
     for i, sheet in enumerate(record_sheet_names):
         tmp = pd.read_excel(filename, sheet)
-        # for key, series in tmp.iteritems():
+        # For key, series in tmp.iteritems():
         #     h5store[key] = series[series.notnull()]
 
         if i == 0:

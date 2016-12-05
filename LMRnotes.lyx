@@ -79,6 +79,39 @@
 \begin_body
 
 \begin_layout Standard
+You can gain access to the proxy data we talked about in the following directory
+:
+\end_layout
+
+\begin_layout Standard
+/home/disk/kalman3/rtardif/LMR/data/proxies
+\end_layout
+
+\begin_layout Standard
+Files are:
+\end_layout
+
+\begin_layout Standard
+PAGES phase 1:
+\end_layout
+
+\begin_layout Standard
+Pages2k_Metadata.df.pckl Pages2k_Proxies.df.pckl
+\end_layout
+
+\begin_layout Standard
+NCDC-LMR:
+\end_layout
+
+\begin_layout Standard
+NCDC_v0.1.0_Metadata.df.pckl NCDC_v0.1.0_Proxies.df.pckl
+\begin_inset Newline newline
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
 LMR production output is stored here: 
 \end_layout
 
@@ -95,6 +128,21 @@ Each of these directories (r0, etc.) is an ensemble member of ensembles.
 A good start for code is home/disk/ekman/rtardif/codes/LMR/pyLMR/verification/LM
 R_verify_grid.py.
  Search for ``ensemble mean''
+\end_layout
+
+\begin_layout Standard
+excel_to_pandas is in the code/misc dir.
+ Should be able to modify gently to get all the PAGES2k records!
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Don't I need to fix the interpolation so that it doesn't fill back in after
+ e.g.
+ decadally subsampling?
 \end_layout
 
 \end_body

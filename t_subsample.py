@@ -21,7 +21,9 @@ interval: two-element array giving the start and end years. Make sure that these
     # Change the interval so that it's an integer multiple of tau.
     intl = int(np.diff(intervalo))
     interval = intervalo
-    interval[1] = interval[0]+intl-np.mod(intl,tau)
+
+    # The minus 1 here is necessary if i use .loc in defining rec in the for loop below
+    interval[1] = interval[0]+intl-np.mod(intl,tau) -1
     newt = np.arange(interval[0],interval[1],tau) + tau/2
     # define a new dataframe to populate
     df = pandas.DataFrame(index=newt)
@@ -30,9 +32,12 @@ interval: two-element array giving the start and end years. Make sure that these
 
     for ii in np.arange(0,len((recdf.columns))):
         #rec = recdf.iloc[interval[0]:(interval[1]-np.mod(intl,tau)),ii].values
-        rec = recdf.iloc[interval[0]:interval[1],ii].values.astype('float')
+        rec = recdf.loc[interval[0]:interval[1],ii].values.astype('float')
         rr = rec.reshape(tau,-1)
         r2 = np.nanmean(rr,0)
+#        import pdb
+#        pdb.set_trace()
+        
         df[recdf.columns[ii]] = pandas.DataFrame(data=r2,index=newt)
         #Df.ix[:,recdf.columns[ii]] = pandas.DataFrame(data=r2,index=newt)
 

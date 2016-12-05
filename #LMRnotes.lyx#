@@ -133,6 +133,45 @@ R_verify_grid.py.
 \begin_layout Standard
 excel_to_pandas is in the code/misc dir.
  Should be able to modify gently to get all the PAGES2k records!
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Don't I need to fix the interpolation so that it doesn't fill back in after
+ e.g.
+ decadally subsampling?
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+LIM calculation is really just a regression
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+Can try calibrating LIMs on different periods (different lengths and proximities
+ to the validation interval) and see whether there are improvements in predictab
+ility in CCSM4
+\begin_inset Newline newline
+\end_inset
+
+
+\begin_inset Newline newline
+\end_inset
+
+I think the network design approach makes sense.
+ I'll just say that I'm averaging records that lie within that region.
+ Some will be more important than others.
+ Doesn't rule out places from outside the region.
 \end_layout
 
 \end_body

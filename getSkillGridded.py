@@ -84,8 +84,9 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
     D0  = D.transpose()[:-tau,:]
     # evolved IC matrix
     Dt  = D.transpose()[tau:,:]
-    G = np.dot(np.dot(Dt.transpose(),D0),linalg.pinv(np.dot(D0.transpose(),D0),cond=.01))
-
+#    G = np.dot(np.dot(Dt.transpose(),D0),linalg.pinv(np.dot(D0.transpose(),D0),cond=.01))
+    G = np.dot(Dt.transpose(),linalg.pinv(D0.transpose()))
+    
     if doEOF:
         # Project out of SVD space into proxy space.
 
@@ -107,11 +108,22 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0):
 
     # Just compute the diagonal of the covariance matrix. I divide by l-2 (rather than l-1 for an unbiased covariance estimator) because we can only look at l-1 predicted values.
 
-    cvec = np.sum(
-                  (pd_val.values[1:,:]-np.mean(pd_val.values[1:,:],0))
-                  *(pred[:-1,:]-np.mean(pred[:-1,:],0))
-                 ,0)/(l-2)
-    corr = cvec/np.std(pd_val.values[1:,:],0)/np.std(pred[:-1,:],0)
+    # Computing stds by hand because using np.std was giving weird results (possibly due to the different normalization)
+    cvec = np.nansum(
+                  (pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
+                  *(pred[:-1,:]-np.nanmean(pred[:-1,:],0))
+                 ,0)/(l-1)
+    stdval = (np.nansum(
+                  (pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
+                  *(pd_val.values[1:,:]-np.nanmean(pd_val.values[1:,:],0))
+                 ,0)/(l-1))**.5
+
+    stdpred = (np.nansum(
+                  (pred[:-1,:]-np.nanmean(pred[:-1,:],0))
+                  *(pred[:-1,:]-np.nanmean(pred[:-1,:],0))
+                 ,0)/(l-1))**.5
+
+    corr = cvec/stdval/stdpred
 
     rmsedf = pandas.DataFrame(columns=pd_val.columns)
     rmsedf.loc[1] = rmse
