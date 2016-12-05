@@ -30,16 +30,27 @@ interval: two-element array giving the start and end years. Make sure that these
 
     # Loop through different records, bin them, and populate df with binned values
 
+
     for ii in np.arange(0,len((recdf.columns))):
         #rec = recdf.iloc[interval[0]:(interval[1]-np.mod(intl,tau)),ii].values
         rec = recdf.loc[interval[0]:interval[1],ii].values.astype('float')
         rr = rec.reshape(tau,-1)
         r2 = np.nanmean(rr,0)
-#        import pdb
-#        pdb.set_trace()
-        
         df[recdf.columns[ii]] = pandas.DataFrame(data=r2,index=newt)
-        #Df.ix[:,recdf.columns[ii]] = pandas.DataFrame(data=r2,index=newt)
+
+#    def func(ii,recdf):
+#        rec = recdf.loc[interval[0]:interval[1],ii].values.astype('float')
+#        rr = rec.reshape(tau,-1)
+#        r2 = np.nanmean(rr,0)
+#        return pandas.DataFrame(data=r2,index=newt)#
+#
+#    from joblib import Parallel, delayed
+#    import multiprocessing
+#
+#    inputs = np.arange(0,len((recdf.columns)))
+#    num_cores = multiprocessing.cpu_count()
+#    df = Parallel(n_jobs=num_cores)(delayed(df[recdf.columns[ii]]=func)(ii,recdf) for ii in inputs)
+
 
     return df
 
