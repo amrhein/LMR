@@ -9,7 +9,7 @@ tau: bin width
 interval: two-element array giving the start and end years. Make sure that these are a subset of the indices of recdf; there is nothing to catch an error if this is not true and I'm not sure what will happen.
 '''
     # Do nothing if tau is 1.
-    if tau==1:
+    if (tau==1) | (tau==0):
         return recdf.loc[intervalo[0]:intervalo[1]]    
 
 #        import pdb

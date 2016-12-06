@@ -17,7 +17,7 @@ from mpl_toolkits.basemap import Basemap
 from scipy import signal
 from t_subsample import t_subsample
     
-def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False):
+def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False,doNormalize=True):
     ''' Constructs a LIM using the equation of Penland (1996) etc. by computing two covariance matrices at lag 0 and lag tau.
     D is a 2d matrix whos rows are indexed in time and whose columns correspond to different records.
     Tau is a unit of time and should be specified in terms of the units indexing D in time (e.g., if D is yearly, a lag of two years is specified by tau = 2)
@@ -47,9 +47,13 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False):
         pd_vali = pandas.DataFrame(columns = pd_vali.columns,index=pd_vali.index,data=signal.detrend(pd_vali,0))
 
     ## Normalize ##
-    pd_calnm = (pd_cali - pd_cali.mean())/pd_cali.std()
-    pd_valnm = (pd_vali - pd_vali.mean())/pd_vali.std()
-
+    if doNormalize:
+        pd_calnm = (pd_cali - pd_cali.mean())/pd_cali.std()
+        pd_valnm = (pd_vali - pd_vali.mean())/pd_vali.std()
+    else:
+        pd_calnm = pd_cali
+        pd_valnm = pd_vali
+        
     # One more check for any missing values in the calibration (could arise from edges of interpolation)
 
     #tokeep2 = ~(pd_calnm.isnull().sum()>0) & ((~pd_valnm.isnull()).sum()>0)
@@ -169,11 +173,11 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False):
     ## Output ##
     ############
 
-    import pdb
-    pdb.set_trace()
-    preddf = pandas.DataFrame(data = pred,index=np.arange(tau+valInt[0],tau+valInt[1]))
+#    import pdb
+#    pdb.set_trace()
+    preddf = pandas.DataFrame(data = pred,index=np.arange(tau+valInt[0],tau+valInt[1]+1))
 
 #    preddf = preddf.mul(pd_vali.std(),1)
-    preddf = preddf.div(preddf.std(),1)
+#    preddf = preddf.div(preddf.std(),1)
     
     return corrdf,rmsedf,G,c0,ct,preddf

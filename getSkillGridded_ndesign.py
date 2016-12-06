@@ -25,48 +25,19 @@ def getSkillGridded_ndesign(pdr,tau,calInt):
 Same as for getSkillGridded but here I output appropriately sampled calibration interval data in order to construct a network design experiment.'''
 
     
-    ########################################################
-    ## Bin data and subselect time frames for cal and val ## 
-    ########################################################
-
     # Bin "average" (ignoring missing values) the data with bin widths tau. 
     # In general these outputs can have many missing values.
 
-    pd_caln = t_subsample(pdr,tau,calInt)
+    pd_cal = t_subsample(pdr,tau,calInt)
 
-    # Nmin = minimum number of averaged obs to have in a record calibration interval
+    D = pd_cal.values
 
-    fracnnan = 0.8
-    Nmin = round(fracnnan*len(pd_caln))
-
-    # Identify proxies that have more than Nmin obs in the cal interval and more than 2 obs in the val interval (needed to make a prediction)...
-    tokeep = ( (~pd_caln.isnull()).sum()>Nmin )
-
-    # ...and eliminate the rest. Linearly interpolate to estimate missing data in cal interval
-    pd_cali = pd_caln.loc[:,tokeep].interpolate()
-
-
-    ## Normalize ##
-    pd_calnm = (pd_cali - pd_cali.mean())/pd_cali.std()
-
-    # One more check for any missing values in the calibration (could arise from edges of interpolation)
-
-    #tokeep2 = ~(pd_calnm.isnull().sum()>0) & ((~pd_valnm.isnull()).sum()>0)
-    tokeep2 = ~(pd_calnm.isnull().sum()>0)
-    pd_cal = pd_calnm.loc[:,tokeep2]
-
-    #################################################
-    ## Compute a LIM over the calibration interval ##
-    #################################################
-
-    De = pd_cal.values
-
-    l,m = De.shape
-
-    D  = De.transpose()
     # initial condition matrix
-    D0  = D.transpose()[:-tau,:]
+    if tau==0:
+        D0  = D
+    else:
+        D0  = D[:-tau,:]
     # evolved IC matrix
-    Dt  = D.transpose()[tau:,:]
+    Dt  = D[tau:,:]
     
     return Dt.transpose(),D0.transpose()
