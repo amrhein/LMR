@@ -17,7 +17,7 @@ from mpl_toolkits.basemap import Basemap
 from scipy import signal
 from t_subsample import t_subsample
     
-def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False,doNormalize=True):
+def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False,doNormalize=True,doSumMask=False,sumMask=1):
     ''' Constructs a LIM using the equation of Penland (1996) etc. by computing two covariance matrices at lag 0 and lag tau.
     D is a 2d matrix whos rows are indexed in time and whose columns correspond to different records.
     Tau is a unit of time and should be specified in terms of the units indexing D in time (e.g., if D is yearly, a lag of two years is specified by tau = 2)
@@ -106,10 +106,17 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False,doNor
     ##############################################################################
     ## Simulate values in the validation interval at tau leads and compute RMSE ##
     ##############################################################################
-    # Maybe should not include interpolated times?
 
     vs = pd_val.values[tau:,:] # shifted validation
     ps = pred[:-tau,:]
+
+    if doSumMask:
+        vs = vs.dot(sumMask)
+        ps = ps.dot(sumMask)
+
+
+#    import pdb
+#    pdb.set_trace()
     rmse = np.sqrt(np.nanmean((vs-ps)**2,0))
 
     # Just compute the diagonal of the covariance matrix. I divide by l-2 (rather than l-1 for an unbiased covariance estimator) because we can only look at l-1 predicted values.
@@ -143,31 +150,31 @@ def getSkillGridded(pdr,tau,calInt,valInt,doEOF=False,kt=0,doDetrend=False,doNor
 
     # Matrices
 
-    plt.figure(figsize=(20,10))
-    ax1 = plt.subplot(1,3,1)
+#    plt.figure(figsize=(20,10))
+#    ax1 = plt.subplot(1,3,1)
     c0 = np.dot(D0.transpose(),D0)
-    plt.imshow(c0, origin='upper',interpolation='none')
-    if doEOF: 
-        ttl = ax1.set_title('Lag 0 covariance in the EOF basis',size=16)
-    else: 
-        ttl = ax1.set_title('Lag 0 covariance',size=16)
-    plt.colorbar(fraction=0.046, pad=0.04)
+#    plt.imshow(c0, origin='upper',interpolation='none')
+#    if doEOF: 
+#        ttl = ax1.set_title('Lag 0 covariance in the EOF basis',size=16)
+#    else: 
+#        ttl = ax1.set_title('Lag 0 covariance',size=16)
+#    plt.colorbar(fraction=0.046, pad=0.04)
 
 
     ct = np.dot(Dt.transpose(),D0)
-    ax2 = plt.subplot(1,3,2)
-    plt.imshow(ct, origin='upper',interpolation='none')
-    plt.colorbar(fraction=0.046, pad=0.04)
-    if doEOF: 
-        ttl = ax2.set_title('Lag ' + str(tau) + ' covariance in the EOF basis',size=16)
-    else: 
-        ttl = ax2.set_title('Lag ' + str(tau) + ' covariance',size=16)
+#    ax2 = plt.subplot(1,3,2)
+#    plt.imshow(ct, origin='upper',interpolation='none')
+#    plt.colorbar(fraction=0.046, pad=0.04)
+#    if doEOF: 
+#        ttl = ax2.set_title('Lag ' + str(tau) + ' covariance in the EOF basis',size=16)
+#    else: 
+#        ttl = ax2.set_title('Lag ' + str(tau) + ' covariance',size=16)
     
-    ax3=plt.subplot(1,3,3)
-    plt.imshow(G, origin='upper',interpolation='none')
-    plt.colorbar(fraction=0.046, pad=0.04)
-    ttl = ax3.set_title('G matrix',size=16)
-    plt.show()
+#    ax3=plt.subplot(1,3,3)
+#    plt.imshow(G, origin='upper',interpolation='none')
+#    plt.colorbar(fraction=0.046, pad=0.04)
+#    ttl = ax3.set_title('G matrix',size=16)
+#    plt.show()
 
     ############
     ## Output ##
